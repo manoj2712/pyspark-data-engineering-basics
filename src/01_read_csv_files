@@ -1,0 +1,49 @@
+# Databricks notebook source
+flight_df = spark.read.format("csv")\
+            .option("header","false")\
+                .option("inferschema","false")\
+                    .option("mode", "FAILFAST")\
+                        .load("/Volumes/workspace/default/flight_data/flight_data.csv")
+
+# COMMAND ----------
+
+df.show(5)
+
+# COMMAND ----------
+
+flight_df.printSchema()
+
+# COMMAND ----------
+
+flight_df_header = spark.read.format("csv")\
+            .option("header","true")\
+                .option("inferschema","false")\
+                    .option("mode", "FAILFAST")\
+                        .load("/Volumes/workspace/default/flight_data/flight_data.csv")
+
+# COMMAND ----------
+
+flight_df_header.show(5)
+
+# COMMAND ----------
+
+flight_df_header.printSchema()
+
+# COMMAND ----------
+
+flight_df_header_schema = spark.read.format("csv")\
+            .option("header","true")\
+                .option("inferschema","true")\
+                    .option("mode", "FAILFAST")\
+                        .load("/Volumes/workspace/default/flight_data/flight_data.csv")
+
+# COMMAND ----------
+
+flight_df_header_schema.show(5)
+
+# COMMAND ----------
+
+flight_df_header_schema.printSchema()
+
+# COMMAND ----------
+
