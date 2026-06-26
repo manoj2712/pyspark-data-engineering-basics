@@ -1,1 +1,484 @@
 
+1) Apache spark:
+	 Apache Spark is an open-source distributed computing framework used for big data processing, real-time analytics, machine learning, and ETL pipelines. It is designed to process massive datasets much faster than traditional systems like Hadoop MapReduce.
+key features: in-memory processing, distributed computing, unified analytics engine.
+
+
+apache spark is a group of computers(node) know as clusters to process big data.
+
+===============================
+
+2) we follow two approaches to handle big data processing - monolithic and distributed.
+
+in monolithic we upgrade the system (adding rams, cores...) also know as vertically scaling.
+
+in distributed we adding more system(nodes)
+this is know as horizontal scaling.
+by this we have high availability and fault tolerance.
+
+
+===================
+
+3) apache spark vs mapreduce:
+mapreduce follows distributed computing approach. 
+we were using mapreduce earlier before apache spark came in picture.
+
+map-reduce has two concept map and reduce. map is responsible to map your data to the machine.
+reduce is response to gather data from the machine(node)
+here we are writing all the intermediate result to the disk, which is time consuming.
+
+In apache spark we will process everything in the memory, write all the intermediate result in memory (RAM).
+Apache spark is upto 100 times faster than map-reduce.
+
+
+===============
+4) features of apache sparks: in-memory computation, lazy evaluation, fault tolerant, partitioning.
+
+
+======================
+5)Apache Spark Architecture: 
+apache spark architecture is developed on the top of the concept Master-Slaves.
+it is also know as master-slaves architecture.
+
+cluster of nodes is combination of driver node and workers nodes.
+we have a resource manager also who manages the resources.
+
+WE have a concept of SPARK SUBMIT where the client/user submit the details like how much workers they need and there computation powers.
+This request goes to the resource manager.
+resource manager first creates the driver node.
+now driver node reads the user request and send response to the resource manager.
+based on the driver node response, resource manger will create worker nodes.
+now driver node will be connected with the worker nodes and the work of the resource manager is done here.
+now driver node distributes the works among the worker node based on the requirement of the user/client.
+worker nodes are the one who actually does the works.
+driver node will orchestrate the flow.
+
+resource manager is also know as cluster manager.
+there are several types of cluster managers (either spark's own standalone cluster manager,  Mesos, YARN, Kubernetes)
+
+SPark applications run as independent sets of processes on a cluster, coordinated by the SparkContext object created in your main program(called driver program)
+
+
+================================
+6)Driver Node: 
+when a machine selected as driver node. then in that machine cluster manager install Application Manager Container (AMC).
+
+**Spark is written in Scala.
+Inside AMC we have a pyspark main(optional), JVM(java virtual machine) main and Py4J Process.
+we need pyspark main when we wrote code in python.
+
+Pyspark code will be converted into JVM main by a process called Py4J.
+pyspark main is called PySpark driver and JVM main is called Application driver.
+
+
+============================
+7) Worker Node:
+worker node has a JVM only.
+
+*When we creates UDF(user defined functions) in that cases worker nodes install python along with JVM.
+
+
+============================
+8) Databricks: databricks creates spark session for us.
+
+
+==========
+9) Lazy Evaluation & action: Whenever spark receives the transformation, it store all of them in a PLAN and execute them when a ACTION is performed.
+some of actions are display(), show(), count(),...
+
+
+===================
+10)Partition: We partition the dataset, so that multiple nodes can work together.
+	spark by default creates 200 partitions of a dataset.
+====================
+11)RDD(Resilient Distributed Dataset): spark creates logical partition of the dataset and stores them in RDD.
+	RDD is a type of data type in apache spark.
+ 	RDD are fault tolerant.
+	every time we apply transformation, it will create a new RDD (RDD1, RDD2, RDD3,....)
+
+===================
+12)Transformation: Narrow and wide transformation
+	Narrow transformation: common narrow transformation are select, filter. here partition are independent to each other.
+	Wide transformation: common wide transformation is group by. here we need to shuffle the partition before executing them.
+ 
+
+
+=================
+13)repartition and coalesce: 
+ we need repartition or coalesce to handle skewness of the data.
+
+*NOTE: default partition size is 128MB.
+
+for example by default number of partition is equal to size of data divide by 128.
+
+If we want to increase number of partition then we use repartition. while repartitioning we were reshuffling(hash based shuffling) the existing partitions.
+we can use repartition for decreasing number of partition but this is not recommendable.
+
+To decrease the number of partition we use coalesce. In general scenario in coalesce, we don't do any kind of shuffling. for some rare cases we perform reshuffling.
+we won't be able to increase number of partition using coalesce.
+
+to get number of partition we have to convert dataframe into rdd, we can't run getPartitions() function directly on dataframe.
+	df.rdd.getPartitions()
+to create partition: df.repartition(number_of_partition)
+we can repartition based on some col also: df.repartition(number_of_partition, col_name) -> here number of partition is optional.
+
+coalesce: df.coalesce(number_of_partition)
+
+
+==========================
+14) Jobs, Stages and Tasks:
+	When we hit or create an action a job is created.
+	When a job is created, it can have multiple stages.
+	each stage can have multiple tasks.
+					
+								     |--------------Task
+								     |
+					  =============== Stage -----|---------------Task
+					 ||        		     |
+					 ||			     |---------------TAsk
+					 ||	
+					  =============== Stage--------------TAsk
+					 ||
+					 ||
+		Action =====>	JOB ======
+					 ||
+					 ||
+					 ================== Stage---------------task
+
+
+
+	A Stage is a set of transformations that can run together without shuffling data.
+	Whenever Spark sees a shuffle, it creates a new stage.
+	A Task is the smallest unit of work.
+	Each task runs on a single partition of data.
+	Task is associated with number of partition.
+	TAsk= number of partition.
+	If a stage has N partitions, Spark creates N tasks for that stage. 
+	Each job has at least one stage and one task.
+
+	Actions that trigger a job:
+		count()
+		collect()
+		show()
+		save()
+		head()
+		write.format().save()
+	
+	Examples of shuffle transformations:
+		groupBy()
+		join()
+		distinct()
+		reduceByKey()
+		orderBy()
+
+	Number of jobs = number of actions
+	number of stages = number of shuffles
+	number of tasks = number of partitions.
+	
+
+	example:
+	let’s say you run this Spark code:
+
+	val df = spark.read.parquet("sales.parquet")      // 4 partitions
+	val cleaned = df.filter("amount > 1000")          // narrow transformation
+	val grouped = cleaned.groupBy("country").count()  // shuffle (wide transformation)
+
+	grouped.show()                                    // action
+
+	1️⃣ How many Jobs?
+	show() is an action → Spark creates 1 Job.
+	✔ Jobs = 1
+
+	2️⃣ How many Stages?
+	Look at the transformations:
+	(A) filter("amount > 1000")
+	Narrow transformation
+	No shuffle → stays in same stage
+
+	(B) groupBy("country").count()
+	groupBy requires shuffling
+	This creates a shuffle boundary
+
+	So Spark splits into two stages:
+	Stage 1 (before shuffle)
+	Stage 2 (after shuffle)
+
+	✔ Number of Stages = 2
+
+	3️⃣ How many Tasks per Stage?
+	Stage 1:
+	Input is the Parquet file with 4 partitions
+	➡️ Spark creates 4 tasks in Stage 1
+
+	Stage 2:
+	Shuffle partitions default = 200 (Spark SQL default)
+	➡️ Stage 2 has 200 tasks
+
+	✔ Tasks: 4 (Stage 1) + 200 (Stage 2)
+
+
+
+=======================
+15) JOINS or JOINs strategy in spark:	
+	join is a wide transformation.
+	Sort merge join and shuffled hash join and broadcast join.
+
+	in broadcast join we don't do any reshuffling.
+	by default size of table for broadcast join is 10MB.
+
+
+===================
+16) Sparks Sql engine:
+							 analysis
+	Data engineer -------> unresolved logical plan ---------------> resolved logical plan -------> optimized logical plan ------> Physical plan -----> cost model---> executors
+							  ^
+							  |
+							  |
+							Catalog 
+
+	Whatever code a DE wrote is known as unresolved logical plan.
+	Catalog is a Metadata.
+	spark sql engine is a compiler.
+
+
+===================
+17)Driver Memory Management:
+	the driver in spark is the master process that coordinates all tasks.
+	It holds metadata, task scheduling info, Dags, and more.
+	Driver Memory= Memory allocated to the driver process when the spark job runs.
+	If driver runs out of memory -> job fails with OutOfMemoryError.
+	Two major components of Driver's memory  are: JVM heap memory and Overhead memory.
+	JVM heap memory:
+		Core memory area used by the Driver's JVM.
+		Stores- Dags, metadata(RDD lineage, stage plans)
+		Broadcast variables.
+		task scheduling info.
+	Overhead memory:
+		used for JVM threads.
+		shared libraries.
+		off-heap buffers (like Netty, native code)
+
+	Whenever we request memory for Driver node, we will get some extra memory for overhead. 
+	that overhead memory is 10% of memory requested or 384MB whichever is maximum.
+	
+	->DRIVER Out of MEMORY:
+		i. when you are broadcasting a data which has more memory then your heap memory, then it will create an error. this is one type of driver out of memory.
+		ii. when we are calling collect() function (df.collect()), it will collect data from all the partition, and if the total data is more than the driver memory then we will get driver out of memory.
+
+
+=======================
+18) Executor Memory Management:
+	It has 4 major parts:
+		JVM heap memory		Off Heap memory		Overhead memory		Pyspark memory
+	
+	by default Off Heap memory is 0(Zero).
+	off heap memory is not managed by JVM.
+	By default Pyspark memory is 0(Zero).
+	we will get 10% of executor memory(JVM heap memory) or 384MB whichever is maximum as Overhead memory.
+
+	i) JVM heap memory:
+		we have 3 major parts here: Reserved Memory 		Spark memory pool 		User Memory 	
+		
+		->Reserved memory is of fixed size 300MB, which is used by spark engine.
+		by default Spark memory pool is 60% of total request memory (executor memory) - 300MB.
+		by default user memory is remaining memory which is 40% of total request memory (executor memory) - 300MB.
+		->User memory is used for UDF (user defined functions)
+
+		suppose we request 10GB of memory for the executor then 
+		JVM heap memory = 10GB
+		OverHead memory = 1GB maximum(10% of 10GB or 384MB)
+		
+		in JVM heap memory:
+			Reserved Memory = 300MB
+			spark memory pool = 5964MB (60% of (10GB - 300MB))
+			User memory = 3976MB (40% of (10GB - 300MB))
+ 		
+
+		-> SPARK MEMORY POOL has two components: Storage memory and executor memory.
+			storage memory is 50%. used for caching (long term memory)
+			executor memory is 50%. used for transformation (short term memory)
+			by default storage and executor memory are 50%. we can change it using spark.memory.storageFraction.
+			Even if we decide the memory size of the storage and executor memory, there is always chance that it will shift up or down on runtime based on the requirement.
+
+		-> Unified Memory Management:
+			- suppose our executor memory is full and we have space in storage memory then executor will use the storage memory.
+			- suppose executor memory is full and it used some of storage memory as well. and now both the memory are full. even now executor need memory then executor will 
+			  evict the storage memory based on Least used Cached Data (LRU) method.
+			- suppose storage memory is full now and we have space in executor memory then it will use executor memory.
+			- suppose storage memory is full and it used some of executor memory as well, and now both the memory are full. if now storage need more memory then it will apply 			  LRU on its own memory area and not on the executor memory, because storage memory has no authority to evict executor memory. it will use executor memory only if 			  there is free space available. 
+
+
+	-> Executor Out of Memory: executor can spill the complete partition the disk if the available memory is less and we need memory for computation. 
+				 suppose we have skewness in the data and the size of new coming partition is bigger than the executor memory then it will by out of memory error.
+				 to eliminate the out of memory error, we either increase the size of the executor or eliminate the skewness of the data.
+
+
+
+
+=================================
+19) Salting:
+	salting is an approach used to eliminate the skewness.
+	Salting in Apache Spark is a technique used to avoid data skew by distributing skewed keys more evenly across the cluster.
+	Salting means adding a random number to skewed keys to split them into multiple smaller keys, so Spark distributes the data.
+	Where salting is used?
+		Skewed joins
+		Skewed groupBy or reduceByKey
+		Partition imbalance
+
+
+============================
+20) Cache and Persist: caching is a technique we used to store df in the executor memory.
+			caching is particular use case of persist.
+	Storage levels:
+		memory_and_disk : tries to store data in memory first. if memory is not enough, spill the rest of disk
+		memory_only : data is stored in RAM as deserialized Java objects. if not enough memory recompute the partitions when needed.
+		disk_only : stores data only on disk. slowest option.
+		memory_only_2 : 2* replicated.
+		off_heap (experimental): uses off-heap memory (outside JVM heap). must be enabled with spark.memory.offHeap.enabled=true
+
+	
+
+==========================
+21) EDGE NODE: we have a machine/node which connects with Cluster instead of the client/user/engineer directly connect with cluster.
+		so client connect with edge node and then edge node connects with cluster.
+		this concept gives birth to the client and cluster mode.
+	
+
+===========================
+23) Client and Cluster Mode: in client mode, cluster manager creates driver node in client's machine.
+			     in cluster mode, cluster manager creates driver node on the one of the machine and rest of the machines are worker node.
+			it is recommended to used client mode only during the development phase or development environment. In client mode, network latency will be high.
+
+
+
+===================================
+24)Partition Pruning:
+		We are storing data in partitions.
+
+=================
+25) Dynamic Partition Pruning (DPP):
+			for DPP data should be partitioned and 2nd table should be broadcasted.
+
+
+
+
+=====================
+26) Adaptive Query Execution (AQE):
+	Dynamic coalesce the partition	
+	Optimizes join run query during runtime.
+	Dynamically partition the skewed data.
+	
+	data/partition is called skewed when it is more than 5 times of the median and size of the data is more than 256MB.
+
+
+==========================================================
+=========================================================
+1) Dataframe Read API: spark.read.format('file format, optional, by default it takes as parquet')\
+				.option('takes key value pair, optional, example, header, inferschema, mode,...')\
+				.schema('optional, to pass manual schema')\
+				.load('path to the data file')
+
+	We have 3 types of Modes:
+			i. Failfast = fail execution when malformed record found. in data
+			ii. Dropmalformed = drops corrupted records.
+			iii. permissive = this is default option, it set null value to all corrupted fields.
+
+2) storage hierarchy in Databricks: catalog -> schema -> volume -> files
+		to read file in spark.read.load("/Volumes/workspace/workspace_name/volume_name/file_name')
+
+
+3) manual schema creation: 2 ways 
+			i. Struct Type and Struct Field : we have to import library: from pyspark.sql.types import StructType, StructField
+				struct type defines the structure of the dataframe, list of struct field
+				struct field is structure of a column. (data type, nullable or not). struct field is info of a column.
+				my_schema = StructType([StructField("col_name",datatype, null or not(True/False),[],..,[])
+				my_schema = StructType([StructField("id",IntegerType(),False), StructField("name",StringType(), True), StructField("age", IntegerType(),True)])
+				
+			ii. DDL: my_schema = "id integer, name string, age integer"
+				in DDL we can't mention if a column can be nullable or not.
+
+4) Data Types in Spark:
+	Type	Spark Type
+	int	IntegerType()
+	string	StringType()
+	float	FloatType()
+	double	DoubleType()
+	boolean	BooleanType()
+	date	DateType()
+	timestamp	TimestampType()
+
+
+5) How to handle corrupted Data: we have to create a manual schema, where we have to add a column _corrupt_record of stringType().
+			if the record is corrupt then the value will be stored in _corrupt_record column.
+			it works with CSV and json. and not with parquet, delta.
+			to store them for future use. we have to use .option("badRecordsPath",filePath), key should be "badRecordsPath".
+			we are not allowed to specify mode when we are storing corrupt records.
+			bad records will not write until you perform action (because of lazy evolution)
+
+
+6) Read JSON: 2 types: line delimited json  and multiline json.
+		to read multiline json we have to pass option("multiline","true")
+
+
+
+7) Spark SQL engine: 
+
+
+
+8) Parquet format: data stored in columnar based. in big data we work on write once read many pattern.
+			as most of the time we don't use all the columns, it's efficient to use columnar based(parquet).
+			parquet files are in binary file format.
+	OLAP: we use columnar based format.
+	OLTP: we use row based format.
+
+
+
+9) write to disk:
+	Dataframewrite.format().option().partitionBy().bucketBy().save()
+	
+	different modes: append, overwrite, error ifexists, ignore.
+
+10) Partitioning and Bucketing: for partitioning we use partitionBy("col1","col2",....) -> column sequence is important, because it first partition based on col1 then col2...
+	Partitioning and Bucketing are optimization techniques used to improve:
+	query performance
+	joins
+	shuffles
+	large-scale processing
+
+	partitioning: splitting data into folders based on column values
+	
+	Bucketing divides data into:
+		fixed number of files/buckets
+		based on hash of column
+		improves joins and aggregations.
+	.bucketBy(bucket_size, "col_name")
+	we have to use saveTableAs(table_name) with bucket. while we use save() with partitionBy()
+
+
+11) Spark Session and Spark Context: 
+
+
+12) to transform data we have two options: dataframe api and spark sql.
+
+
+13) union and unionAll:
+		Technology				union			    unionAll
+	PySpark DataFrame API			keeps duplicates		keeps duplicates
+	SQL / Spark SQL				removes duplicates		keeps duplicates
+
+
+	number of column should be same in both the dataframe/table
+	sequence of column should be same in both the dataframe/table. spark will not check for order. it will just add them as it is.
+	to overcome above problem we use unionByName() 
+
+14) if else: we use when and otherwise in pyspark for if else.
+		whenever we are passing when then we have to use otherwise, else the other records which didn't satisfy the condition gets value updated to NULL
+
+
+15) count is both a action and a transformation. when we do df.count() then it's a action while when we call inside select() function it is transformation.
+
+	when in select()function we do count on a single column then it will ignore rows where value is NULL for that column.
+	but when we do count() on all columns it will include all rows.
+
+ 
+
